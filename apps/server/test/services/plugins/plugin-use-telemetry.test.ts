@@ -45,14 +45,16 @@ function arrange(enabled = true) {
 }
 
 describe("plugin use telemetry", () => {
-  it("credits a selected recommendation on the first public use only", () => {
+  it("counts a plugin once a day and credits a selection on its next use", () => {
     const { deps, capture } = arrange();
+    capturePluginUse(deps, "workflows");
+    capturePluginUse(deps, "workflows");
     rememberPluginRecommendation(deps, "workflows", "rec_123456789012345678");
-
     capturePluginUse(deps, "workflows");
     capturePluginUse(deps, "workflows");
 
     expect(capture.mock.calls.map(([event]) => event)).toEqual([
+      { name: "plugin_use", properties: { plugin_id: "workflows" } },
       { name: "plugin_use", properties: { plugin_id: "workflows" } },
       {
         name: "recommendation",
@@ -63,7 +65,6 @@ describe("plugin use telemetry", () => {
           action: "used",
         },
       },
-      { name: "plugin_use", properties: { plugin_id: "workflows" } },
     ]);
   });
 

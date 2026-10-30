@@ -1195,7 +1195,9 @@ UI rather than through an agent tool or CLI command: `monaco-editor` (a saved
 file), `prompt-library` (an inserted prompt) and `agent-annotations` (a saved
 annotation). It takes no arguments. The server counts it as one `plugin_use`
 of the calling plugin, exactly like a successful tool call or CLI command, and
-sends nothing for non-public plugins or when usage data is off.
+sends nothing for non-public plugins or when usage data is off. Each plugin's
+use is sent at most once per day. Forks of these plugins inherit the call, so
+removing it later means leaving a no-op stub.
 
 ## `bb.server.internal_DO_NOT_USE_openTunnelIngress`
 
@@ -3823,8 +3825,8 @@ callers, all through `recordTelemetryEvent` in
 (`OnboardingFlow`, `useOnboardingProjectImport`, and agent installs it starts
 through `provider-cli-install-store`) and `NewThreadComposer`'s
 `new_thread_submit` outcomes. The setup guide's Plugins step reports `recommendation` `shown` and `selected`
-with a per-visit `recommendation_id`; `selected` also stores that id for the
-plugin until its first use, disable or uninstall. `NewThreadComposer` also
+with a per-visit `recommendation_id`; `selected` also stores that id in server-owned
+settings until the plugin's next use, disable or uninstall. `NewThreadComposer` also
 reports `new_thread_blocker` once per blocker reason
 while a draft exists. `onboarding_operation` reports a guide action's
 started, succeeded or failed outcome with only a public agent id or counts.
