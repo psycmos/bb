@@ -71,6 +71,16 @@ export type TelemetryEvent =
         source_kind: "builtin" | "git" | "npm" | "path";
       };
     }
+  | { name: "plugin_use"; properties: { plugin_id: string } }
+  | {
+      name: "recommendation";
+      properties: {
+        resource_type: "plugin";
+        resource_id: string;
+        recommendation_id: string;
+        action: "used";
+      };
+    }
   | RecordTelemetryEventRequest;
 
 export interface TelemetryService {

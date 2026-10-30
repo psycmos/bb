@@ -164,14 +164,18 @@ export default function promptLibraryPlugin(bb: BbPluginApi): void {
           )
           .map((match) => match.item)
       : [
-          ...starredPrompts.map((prompt): SearchItem => ({
-            kind: "starred",
-            prompt,
-          })),
-          ...history.map((candidate): SearchItem => ({
-            kind: "recent",
-            candidate,
-          })),
+          ...starredPrompts.map(
+            (prompt): SearchItem => ({
+              kind: "starred",
+              prompt,
+            }),
+          ),
+          ...history.map(
+            (candidate): SearchItem => ({
+              kind: "recent",
+              candidate,
+            }),
+          ),
         ];
     const seenTexts = new Set(
       searching ? starredPrompts.map((prompt) => prompt.prompt.text) : [],
@@ -290,6 +294,10 @@ export default function promptLibraryPlugin(bb: BbPluginApi): void {
     unstar: ({ id }) => ({ unstarred: store.unstar(id) }),
     markUsed({ id }) {
       store.markUsed(id, Date.now());
+      return null;
+    },
+    recordInsertion() {
+      bb.internal_DO_NOT_USE_recordPluginUse();
       return null;
     },
   });

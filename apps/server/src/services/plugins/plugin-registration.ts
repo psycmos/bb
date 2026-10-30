@@ -58,16 +58,27 @@ import {
   type PluginResolvedUpdateVersion,
 } from "./update-resolver.js";
 
+export function isPublicPluginProvenance(
+  kind: PluginProvenance["kind"],
+  marketplace: string | null,
+): boolean {
+  return (
+    kind === "builtin" ||
+    (kind === "catalog" &&
+      (marketplace === CURATED_PLUGIN_MARKETPLACE_NAME ||
+        marketplace === BUNDLED_MARKETPLACE_NAME))
+  );
+}
+
 export function pluginInstalledTelemetryEvent(
   pluginId: string,
   provenance: PluginProvenance,
   sourceIntent: PluginSourceIntent,
 ): Extract<TelemetryEvent, { name: "plugin_installed" }> {
-  const isPublic =
-    provenance.kind === "builtin" ||
-    (provenance.kind === "catalog" &&
-      (provenance.marketplace === CURATED_PLUGIN_MARKETPLACE_NAME ||
-        provenance.marketplace === BUNDLED_MARKETPLACE_NAME));
+  const isPublic = isPublicPluginProvenance(
+    provenance.kind,
+    provenance.kind === "catalog" ? provenance.marketplace : null,
+  );
   return {
     name: "plugin_installed",
     properties: {
