@@ -4,11 +4,8 @@ import { eq } from "drizzle-orm";
 import { threadScope, turnScope, type ThreadStatus } from "@bb/domain";
 import {
   groupHostDaemonEvents,
-  HOST_ID_FILE_NAME,
   type HostDaemonEventEnvelope,
 } from "@bb/host-daemon-contract";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TelemetryService } from "../../src/services/system/telemetry.js";
 import {
@@ -25,6 +22,7 @@ import { internalAuthHeaders } from "../helpers/commands.js";
 import {
   seedEnvironment,
   seedHostSession,
+  seedPrimaryHost,
   seedProjectWithSource,
   seedThread,
   seedThreadRuntimeState,
@@ -96,10 +94,7 @@ describe("turn_finished telemetry", () => {
   it("reports a completed root turn once, as the install's first turn", async () => {
     const { harness, host, session, thread, turnFinished } = await setup();
     try {
-      writeFileSync(
-        join(harness.deps.config.dataDir, HOST_ID_FILE_NAME),
-        host.id,
-      );
+      seedPrimaryHost(harness.deps, host.id);
       const response = await postEventBatch(harness, session.id, [
         {
           threadId: thread.id,
@@ -387,6 +382,7 @@ describe("turn_finished telemetry", () => {
             error_category: "none",
             provider: "codex",
             install_turn_number: 1,
+            execution_location: "unknown",
           },
         },
       ]);
