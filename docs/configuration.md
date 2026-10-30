@@ -335,19 +335,34 @@ General → Setup guide, clears it so the guide shows again. The projects step
 lists what `bb project discover` and
 `bb.sdk.hosts.experimental_discoverRepos({ hostId })` return.
 
-**Anonymous usage telemetry.** When usage data sharing is on, bb sends
-anonymous product events to PostHog: app starts, setup guide progress and
-results, thread, message, and turn activity, plugin installs and use, and
-device setup. Events carry a random install id, app version, install kind,
-platform, OS release, architecture, and Node version. They never include
-prompts, file or project names, paths, account details, terminal output, error
-messages, or names of private plugins or custom providers. The app reports its
-events through `POST /api/v1/system/telemetry/events`
-(`sdk.system.experimental_recordTelemetryEvent`), which accepts only a fixed
-allow-list. The source code is the exact reference for every event. Turn it off
-in Settings → General → Privacy & diagnostics, or with `BB_TELEMETRY=false`.
-`BB_FF_INITIATOR_TELEMETRY=false` removes the `initiator` property from thread
-and message events.
+**Anonymous usage telemetry.** PostHog events carry a random install id, app
+version, install kind, platform, OS release, architecture, and Node version.
+The server sends events such as `app_started`, `telemetry_disabled`, `thread_created`,
+`user_message_sent`, `turn_finished`, and `plugin_installed`. The app reports setup-guide and
+first-send events through `POST /api/v1/system/telemetry/events`
+(`sdk.system.experimental_recordTelemetryEvent`), such as `onboarding_started`,
+`onboarding_step_reached`, `onboarding_step_completed`,
+`onboarding_step_skipped`, `onboarding_finished`, `onboarding_agent_state`,
+`onboarding_sign_in`, and `new_thread_submit` (started, accepted, or failed).
+The route accepts only allow-listed events and values: no custom provider
+ids, account details, prompts, project or file names, terminal output, error
+messages, or session ids. Sign-in `exited` means the command exited before
+readiness was observed, not that authentication succeeded; `new_thread_submit`
+`accepted` means the thread was created, not that the provider answered.
+By default (`BB_FF_INITIATOR_TELEMETRY=false` turns it off), `thread_created` and `user_message_sent` also carry
+`initiator`: `user`, `agent`, `automation` (started by the automations
+plugin), `plugin` (any other plugin), or `system` (bb's own retries and follow-ups). Sends from a plugin carry its ID (the plugin SDK adds `originPluginId`), so automation
+runs into an existing thread report `automation`. `bb thread spawn` run inside a thread
+sends that thread as `senderThreadId`; the new thread reports `agent` when the sender has a
+turn running, and `user` otherwise.
+
+`turn_finished` sends `outcome` (`succeeded`, `failed`, or `stopped`),
+`error_category` (`none`, `auth`, `billing`, `rate_limit`, `limit_reached`,
+`provider_unavailable`, `start_failed`, `process_exited`, `host_lost`, or `other`),
+`provider` (a shipped built-in provider ID, otherwise `other`), and
+`install_turn_number`, in addition to the standard event properties. The stored
+per-install number increments atomically on each enabled finish. It pauses while
+telemetry is off and resumes at the next number when enabled again.
 
 ## AI services
 
