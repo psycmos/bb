@@ -1,0 +1,167 @@
+---
+title: bb won't install, update or start
+description: The desktop app won't open, `npx bb-app` stops at startup, or an update fails. Find the message bb shows below; most fixes are a supported Node.js version, a free port, or stopping another copy of bb.
+type: troubleshooting
+sources:
+  - packages/bb-app/src/launcher.ts
+  - packages/bb-app/README.md
+  - apps/desktop/src/main.ts
+  - apps/desktop/src/existing-server-dialog.ts
+  - apps/desktop/src/menu.ts
+  - apps/desktop/src/desktop-update-provider.ts
+  - apps/host-daemon/src/local-api.ts
+  - apps/app/src/components/settings/UpdatesSettingsSection.tsx
+  - apps/cli/src/commands/updates.ts
+  - docs/platform-support.md
+since: 0.48.0
+owner: brsbl
+verified: 2026-10-30
+---
+
+bb runs a server and a host daemon on your computer, started by the desktop app or `npx bb-app`. When either can't start, bb says why; logs are in `~/.bb/logs/`.
+
+| What you see | Likely cause | Fix |
+| --- | --- | --- |
+| No desktop download for your computer | Desktop builds exist for Apple Silicon Macs, Linux x64 and Windows x64 only | Run `npx bb-app@latest` instead |
+| The Linux AppImage doesn't open | FUSE isn't installed | Install `libfuse2`, or start it with `--appimage-extract-and-run` |
+| `Could not locate the bindings file` | npm 12 or later blocked the install scripts bb needs | [Allow the scripts](#could-not-locate-the-bindings-file) |
+| npm warns about an unsupported engine, or bb fails right after install | Node.js is older than 22.19 | Install Node.js 22.19 or newer, 24, or 26 |
+| "bb is already running on This Mac" | Another bb already runs with the same data | Click **Connect**, or **Quit other bb** to start fresh |
+| "Another bb already runs on this data directory" | Same, from the terminal | Run `npx bb-app stop`, then start bb again |
+| "Port conflict" or "another server is already answering" | Another program uses port 38886 | [Stop it, or use another port](#port-conflict) |
+| "Host daemon local API port 38887 is already in use" | Another program uses the daemon's port | Stop it, or pass `--host-daemon-port` |
+| "Could not start bb", "Server failed to start" or "bb stopped" | The server crashed while starting | [Read the logs](#the-server-or-host-daemon-wont-start) |
+| "Last update failed" in **Settings → Updates** | The update couldn't download or restart bb | Open **View details**; run `npx bb-app@latest` if bb won't come back |
+| "Download failed" for the desktop app | The desktop update couldn't download | Click retry, or download the app again |
+| "Couldn't reach getbb.app" on a company network | A proxy or company certificate blocks bb | [Set the proxy and trust the certificate](#couldnt-reach-getbbapp-check-your-connection-then-try-again) |
+
+## Install the desktop app
+
+Download it from the [desktop-latest release](https://github.com/get-bb/bb/releases/tag/desktop-latest).
+
+<Tabs items={["macOS", "Windows", "Linux"]}>
+<Tab value="macOS">
+
+Apple Silicon (arm64) only. On an Intel Mac, run `npx bb-app@latest` and open `http://localhost:38886`.
+
+</Tab>
+<Tab value="Windows">
+
+The x64 installer is in alpha and needs [Git for Windows](https://git-scm.com/download/win); install Git first. Or run `npx bb-app@latest` inside WSL2, with Node.js, Git and your agent CLIs installed there.
+
+</Tab>
+<Tab value="Linux">
+
+An x64 AppImage in alpha, for glibc distributions at least as new as Ubuntu 22.04; on arm64, run `npx bb-app@latest`. It needs FUSE: install `libfuse2`, or run:
+
+```bash
+./bb-x86_64.AppImage --appimage-extract-and-run
+```
+
+</Tab>
+</Tabs>
+
+[bb Nightly](https://github.com/get-bb/bb/releases/tag/desktop-nightly) installs alongside, with a yellow icon and its own update feed.
+
+## Run bb with npx
+
+`npx bb-app` needs Git and Node.js 22.19 or newer in the 22 line, 24, or 26 (`node --version`). Data lives in `~/.bb/`. Stop it with Ctrl+C or `npx bb-app stop`.
+
+### Could not locate the bindings file
+
+npm 12 and later block the install scripts that build bb's native add-ons. Allow them for one run:
+
+```bash
+npx --allow-scripts=better-sqlite3,node-pty,@parcel/watcher bb-app@latest
+```
+
+Or for every global install:
+
+```bash
+npm config set allow-scripts=better-sqlite3,node-pty,@parcel/watcher --location=user
+```
+
+### The bb command isn't found
+
+In the desktop app, open **Settings → General → Command line**, click **Install** next to **bb CLI**, then open a new terminal. Until then, use `npx --package bb-app bb --help`.
+
+## bb is already running
+
+Only one bb can use a data folder (`~/.bb/` by default) at a time. The desktop app says "bb is already running on This Mac" ("This Computer" on Windows and Linux):
+
+- **Connect** opens the running bb.
+- **Quit other bb** stops it, and its agent threads, then starts a new one.
+- **Quit this bb** closes the desktop app.
+
+`npx bb-app` prints "Another bb already runs on this data directory" and exits. Run `npx bb-app stop` (add `--data-dir <path>` for another data folder), then start again.
+
+## Port conflict
+
+The server uses port 38886 and the host daemon 38887. The desktop app shows "Port conflict" or "Could not connect to bb server"; `npx bb-app` shows "Server failed to start" with "another server is already answering at …", or `Host daemon local API port 38887 is already in use on 127.0.0.1. Choose another port with --host-daemon-port <port>.` Find the program and stop it:
+
+<Tabs items={["macOS", "Windows", "Linux"]}>
+<Tab value="macOS">
+
+```bash
+lsof -nP -iTCP:38886 -sTCP:LISTEN
+```
+
+</Tab>
+<Tab value="Windows">
+
+```powershell
+Get-NetTCPConnection -LocalPort 38886 -State Listen
+```
+
+</Tab>
+<Tab value="Linux">
+
+```bash
+ss -ltnp 'sport = :38886'
+```
+
+</Tab>
+</Tabs>
+
+Or use other ports with `npx bb-app --server-port 38986 --host-daemon-port 38987`, and set `BB_SERVER_URL` to `http://127.0.0.1:38986` for the CLI.
+
+## The server or host daemon won't start
+
+The desktop app shows "Could not start bb" with the output, or "bb stopped" if it stops later. `npx bb-app` prints "Server failed to start" or "Host daemon failed to start" and the logs folder. Read the end of the logs:
+
+- Desktop: **View → Local Logs** shows the desktop, server and host daemon logs.
+- Terminal: `tail -n 200 ~/.bb/logs/server-stdio.log ~/.bb/logs/host-daemon-stdio.log`. Startup errors land there; day-to-day logs are `server.N.log` and `host-daemon.N.log`.
+
+"Daemon lock exists - waiting or reclaiming if stale" followed by a failure means [another bb is running](#bb-is-already-running).
+
+## Last update failed
+
+The **Server** row of **Settings → Updates** updates an `npx bb-app` bb, restarts it and reconnects the page; from the CLI, `bb updates app` checks and `bb updates app apply` updates. On failure, open **View details**, then retry. If threads started during the download, choose **Update** again to restart.
+
+bb doesn't roll back. If the new version won't start, run `npx bb-app@latest`. "Couldn't check npm for a newer release." means bb couldn't reach npm; check the [network or proxy](#couldnt-reach-getbbapp-check-your-connection-then-try-again).
+
+## Desktop updates
+
+The **Desktop** row of **Settings → Updates** shows background downloads. On macOS and Windows, updates install when you quit or click **Relaunch**.
+
+- **"Download failed"**: click retry, or download the app again.
+- **Linux never installs it**: the AppImage only updates itself from a folder bb can write to, and not when extracted. Move it to a folder you own, such as `~/Applications`, or download the new one.
+
+## Couldn't reach getbb.app. Check your connection, then try again.
+
+bb trusts your operating system's certificates. Set a proxy in bb's environment, then restart bb:
+
+```bash
+npx bb-app env set HTTPS_PROXY http://proxy.example.com:3128
+npx bb-app env set NO_PROXY .example.com
+```
+
+The address must start with `http://` or `https://`, or bb ignores it with a `BB_INVALID_PROXY_ENV` warning. For another certificate, set `NODE_EXTRA_CA_CERTS` to a PEM file the same way.
+
+## What to send when you ask for help
+
+- `bb --version`, your operating system, and how you run bb (desktop app, `npx bb-app`, or a service).
+- `node --version` and `npm --version` if you use `npx bb-app`.
+- The exact message and where it appeared.
+- What you did just before: installing, updating, or opening bb.
+- Logs from `~/.bb/logs/`, especially `server-stdio.log` and `host-daemon-stdio.log` (desktop: **View → Local Logs**).
