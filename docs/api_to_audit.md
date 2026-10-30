@@ -3813,7 +3813,8 @@ callers, all through `recordTelemetryEvent` in
 `apps/app/src/components/onboarding/onboarding-telemetry.ts`: the setup guide
 (`OnboardingFlow`, `useOnboardingProjectImport`, and agent installs it starts
 through `provider-cli-install-store`) and `NewThreadComposer`'s
-`new_thread_submit` outcomes. `onboarding_operation` reports a guide action's
+`new_thread_submit` outcomes. `NewThreadComposer` also reports `new_thread_blocker` once per blocker reason
+while a draft exists. `onboarding_operation` reports a guide action's
 started, succeeded or failed outcome with only a public agent id or counts.
 
 Stabilize after deciding whether third-party plugins may emit product events
