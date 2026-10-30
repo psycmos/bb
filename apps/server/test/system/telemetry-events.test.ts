@@ -70,6 +70,7 @@ describe("client telemetry events", () => {
             succeeded_count: 1,
           },
         },
+        { name: "plugin_creation_started", properties: {} },
       ];
       for (const event of events) {
         capture.mockClear();
@@ -161,6 +162,10 @@ describe("client telemetry events", () => {
             outcome: "failed",
             error: "exit 1",
           },
+        },
+        {
+          name: "plugin_creation_started",
+          properties: { pluginName: "bb-plugin-secret" },
         },
       ]) {
         expect((await post(harness, event)).status).toBe(400);
