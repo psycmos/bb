@@ -79,6 +79,8 @@ export type TelemetryEvent =
         provenance: "builtin" | "catalog" | "direct";
         marketplace: string | null;
         source_kind: "builtin" | "git" | "npm" | "path";
+        is_fresh_install: boolean;
+        entry_id: string | null;
       };
     }
   | { name: "plugin_use"; properties: { plugin_id: string } }
