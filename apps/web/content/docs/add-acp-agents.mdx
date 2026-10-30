@@ -1,0 +1,141 @@
+---
+title: Add Cursor, opencode and other ACP agents
+description: bb runs any coding agent that speaks the Agent Client Protocol (ACP). Cursor, opencode, omp, Grok Build and Hermes Agent are built in, the official ACP registry adds more in one click, and you can add your own agent as JSON.
+type: how-to
+sources:
+  - plugins/provider-acp/server.ts
+  - plugins/provider-acp/app.tsx
+  - plugins/provider-acp/src/agents.ts
+  - plugins/provider-acp/src/known-agents.ts
+  - plugins/provider-acp/src/registry.ts
+  - plugins/provider-acp/src/registry-service.ts
+  - packages/provider-bridge-acp/src/launch-spec.ts
+since: 0.0.29
+owner: brsbl
+verified: 2026-10-30
+---
+
+Install the agent's CLI on the machine, sign in with its own command, then pick it in the model picker. bb starts the agent's command on the thread's machine and talks to it over ACP; in Settings these agents come from the **ACP providers** plugin.
+
+## Use a built-in agent
+
+1. Install the agent's CLI on the machine and sign in with its own command.
+2. Start a new thread and pick the agent in the model picker.
+
+| Agent | Command bb runs | Sign in with | Shown |
+| --- | --- | --- | --- |
+| Cursor | `cursor-agent acp` | `cursor-agent login` | Always |
+| opencode | `opencode acp` | `opencode auth login` | When installed |
+| omp | `omp acp` | `omp login` | When installed |
+| Grok Build | `grok agent stdio` | `grok login` | When installed |
+| Hermes Agent | `hermes acp` | `hermes login` | When installed |
+
+bb uses each agent's own login on that machine. "When installed" agents appear once bb finds the command on a connected machine.
+
+To hide an agent, open **Settings → Providers**, then the agent's **⋯** menu → **Disable**, or run `bb provider disable acp-opencode`.
+
+## Add an agent from the ACP registry
+
+bb can add any registry agent that runs through `npx` (Node.js) or `uvx` (uv). The thread's machine needs Node.js or uv.
+
+1. Open **Settings → Plugins → ACP providers**.
+2. Under **Agent registry**, search for the agent and choose **Add**.
+3. Start a new thread and pick the agent in the model picker.
+
+<Screenshot
+  src="/docs-images/add-acp-agents/agent-registry"
+  alt="The Agent registry section of the ACP providers settings lists registry agents, each with an Add button or a Manual install badge."
+  width={768}
+  height={330}
+/>
+
+```sh
+bb acp registry
+bb acp add <agent-id>
+bb acp remove <agent-id>
+```
+
+| Label | Meaning |
+| --- | --- |
+| **Manual install** | Ships only as a binary. Install it yourself, then add it as a custom agent. |
+| **Built in** | bb already ships it. |
+| **Update** | The registry has a newer version. Choose it, or run `bb acp add <agent-id>` again. |
+
+## Add your own agent
+
+Any command that starts an ACP server on stdin and stdout works. Add an entry to **Custom agents** in **Settings → Plugins → ACP providers**:
+
+```json title="Custom agents"
+[
+  { "id": "my-agent", "displayName": "My Agent", "command": "my-agent", "args": ["acp"] }
+]
+```
+
+```sh
+bb plugin config provider-acp set customAgents '[{"id": "my-agent", "displayName": "My Agent", "command": "my-agent", "args": ["acp"]}]'
+```
+
+It appears in the model picker right away as `acp-<id>`. Keep the `id` once threads use it. An invalid entry shows why in the setting.
+
+| Field | Required | What it is |
+| --- | --- | --- |
+| `id` | Yes | Lowercase letters, digits and dashes. `cursor` is taken. `opencode`, `omp`, `grok` or `hermes-agent` replaces that built-in agent. |
+| `displayName` | Yes | The name shown in the model picker. |
+| `command` | Yes | The program to run on the thread's machine. |
+| `args` | No | Arguments for the command. |
+| `env` | No | Environment variables, as an object. |
+| `cwd` | No | The folder to start the command in. |
+| `modelCli` | No | How to list and choose models from the command line, for agents that don't report models over ACP. |
+| `reasoningCli` | No | Command-line flags that set the reasoning level at launch. |
+| `nativeReasoning` | No | Set the reasoning level through the agent's own ACP option instead. |
+| `nativeSkillRoots` | No | Skill folders, as `{"user": [...], "project": [...]}`, shown in the `/` menu. |
+| `permissionCli` | No | Command-line flags for each permission mode. |
+| `supportsManualCompaction` | No | `true` if the agent supports `/compact`. bb hides it otherwise. |
+| `providerUsage` | No | Show the agent's usage limits in Provider usage. |
+| `dialect` | No | Read a known agent's extra messages: `cursor`, `opencode`, `omp` or `grok`. |
+
+:::warning
+A custom agent's command runs as you on that machine. Add only agents you trust.
+:::
+
+## Run local models
+
+bb doesn't run models itself. Pick an agent that can reach the model and set it up there:
+
+- **Pi** lists every model in your Pi configuration. See [Pi](/docs/pi).
+- **opencode** lists the models in your opencode configuration, including custom providers. It rejects model IDs it doesn't know.
+- **Your own agent:** if your model server ships an ACP agent, add it as a custom agent.
+
+To make an extra model ID selectable, add it to `customModels`, then run `npx bb-app config refresh` or restart bb. The agent can still reject it when the session starts.
+
+```json title="~/.bb/config.json"
+{
+  "customModels": [
+    { "providerId": "acp-my-agent", "model": "my-proxy/my-model", "displayName": "My Proxy Model" }
+  ]
+}
+```
+
+## What's supported
+
+| Feature | ACP agents |
+| --- | --- |
+| Permission modes | Accept Edits and Full Access. No Approve for me. |
+| Models and reasoning | What the agent reports. With no reported levels, you see a single level. |
+| The agent's own modes | Shown in the composer, such as opencode's agents from `.opencode/`. |
+| Questions | Question cards, up to 10 fields. Larger forms are declined. |
+| Forks | opencode, omp and Hermes Agent, when the installed version supports it. Not custom agents. |
+| Edit an earlier message | No |
+| Context ring and session cost | When the agent reports them |
+| Usage limits | Cursor and opencode (OpenCode Go), in [Provider usage](/docs/track-usage-limits-and-cost) |
+
+See [Agent feature support](/docs/agent-feature-support) for the full comparison.
+
+## Check it worked
+
+Run `bb provider list`; the agent appears as `acp-<id>`. Send a short message in a thread with it and the reply streams in. If the picker says it couldn't load models, the command isn't installed or signed in on that machine.
+
+## Related troubleshooting
+
+- [Choose a model, reasoning and context size](/docs/choose-a-model-reasoning-and-context-size#if-a-model-is-missing): a model is missing from the picker.
+- [Connect MCP servers](/docs/connect-mcp-servers): an agent doesn't see your MCP servers.

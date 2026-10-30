@@ -1,0 +1,88 @@
+---
+title: Codex
+description: bb runs Codex threads with the Codex CLI installed on each machine, using that machine's Codex sign-in and configuration. This page covers setup, the settings bb adds, and what works.
+type: how-to
+sources:
+  - plugins/provider-codex/server.ts
+  - plugins/provider-codex/src/models.ts
+  - plugins/provider-codex/src/native-roots.ts
+  - plugins/provider-codex/src/codex-home.ts
+  - plugins/provider-codex/src/async-questions.ts
+  - plugins/provider-codex/src/bridge/provider-maintenance.ts
+since: 0.0.29
+owner: brsbl
+verified: 2026-10-30
+---
+
+Install Codex 0.136.0 or newer on the machine, run `codex login`, then pick a Codex model in the composer. Each thread uses that machine's Codex folder (`~/.codex`, or `CODEX_HOME`).
+
+## Set up Codex
+
+1. Install Codex 0.136.0 or newer on every machine that runs Codex threads. If it's missing or too old, the composer offers **Install Codex** or **Update Codex**, which runs `npm install -g @openai/codex@latest`.
+2. In a terminal on that machine, run `codex login`. A ChatGPT account or an OpenAI API key both work.
+3. In the composer's model picker, choose a Codex model.
+
+```sh
+bb provider models codex
+```
+
+## What bb uses from your Codex setup
+
+| From Codex | In bb |
+| --- | --- |
+| Your Codex config | MCP servers and other options apply. |
+| `~/.codex/skills`, `~/.agents/skills`, the project's `.codex/skills` and `.agents/skills` (and parent folders), built-in and plugin skills | In the composer's `/` menu |
+
+## Change Codex settings in bb
+
+Open **Settings → Plugins → Codex provider**.
+
+<Screenshot
+  src="/docs-images/codex/provider-settings"
+  alt="The Codex provider settings page shows the Codex memory and Disable provider subagents switches."
+  width={760}
+  height={280}
+/>
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| Codex memory | On | Lets Codex recall existing memories and create new ones from bb threads. |
+| Disable provider subagents | Off | Stops Codex starting its own subagents, so it delegates through bb child threads. |
+
+```sh
+bb plugin config provider-codex set subagentsDisabled true
+```
+
+## What's supported
+
+| Feature | Codex |
+| --- | --- |
+| Permission modes | Accept Edits, Approve for me (Codex's automatic reviewer approves requests), Full Access |
+| Plan | `/plan` gives a plan you approve before Codex runs it |
+| Goals | `/goal` sets a goal Codex keeps working toward. `/goal pause`, `/goal resume`, `/goal clear` or `bb thread clear-goal <id>`. Stopping a thread pauses its goal. |
+| Reasoning | None, Low, Medium, High, Extra High, Max, Ultra (max effort plus automatic task delegation) |
+| Speed | Default, Fast, Ultrafast, as Codex reports for the model and account. `--service-tier fast` on `bb thread spawn` or `bb thread tell`. |
+| Daybreak | A switch in the model picker if your account has it, or `bb thread spawn --option daybreak=true` |
+| Forks | Fork a thread, or edit an earlier message and rerun (editing needs Codex 0.143.0 or newer) |
+| Compaction | `/compact` or `bb thread compact <id>` |
+| Rename and archive | Also updated in Codex |
+| Questions | Question cards. Questions asked while Codex keeps working stay open up to an hour after the turn; your answer arrives as a new message. |
+| MCP and app access requests | A card naming the server, with Codex's choices, when an MCP server or Computer Use asks for input or permission |
+| Usage limits | In [Provider usage](/docs/track-usage-limits-and-cost), for ChatGPT accounts, not API keys |
+| Several accounts | Your ChatGPT accounts, routed by the [Account Pooler](/docs/use-several-accounts) |
+
+Limits:
+
+- A speed the model doesn't list is dropped; that turn runs at the default speed with a warning.
+- Codex accepts model IDs it doesn't list, but your account may not be able to use them.
+
+See [Agent feature support](/docs/agent-feature-support) to compare agents.
+
+## Check it worked
+
+Send a short message in a thread with a Codex model; the reply streams in. An install or update banner, or an empty model list, means Codex isn't installed, is older than 0.136.0, or isn't signed in on the thread's machine.
+
+## Related troubleshooting
+
+- [Choose a model, reasoning and context size](/docs/choose-a-model-reasoning-and-context-size#if-a-model-is-missing): a model is missing from the picker.
+- [Use several accounts](/docs/use-several-accounts#if-no-account-is-eligible): threads stop with an Account Pooler error.
