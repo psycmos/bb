@@ -45,6 +45,27 @@ describe("client telemetry events", () => {
           name: "new_thread_submit",
           properties: { outcome: "failed" },
         },
+        {
+          name: "onboarding_operation",
+          properties: {
+            entry: "first_run",
+            step: "agent",
+            operation: "install",
+            outcome: "failed",
+            resource_id: "claude-code",
+          },
+        },
+        {
+          name: "onboarding_operation",
+          properties: {
+            entry: "replay",
+            step: "projects",
+            operation: "import",
+            outcome: "failed",
+            item_count: 3,
+            succeeded_count: 1,
+          },
+        },
       ];
       for (const event of events) {
         capture.mockClear();
@@ -88,6 +109,26 @@ describe("client telemetry events", () => {
         {
           name: "new_thread_submit",
           properties: { outcome: "failed", message: "private prompt" },
+        },
+        {
+          name: "onboarding_operation",
+          properties: {
+            entry: "first_run",
+            step: "projects",
+            operation: "scan",
+            outcome: "succeeded",
+            resource_id: "/Users/me/private-repo",
+          },
+        },
+        {
+          name: "onboarding_operation",
+          properties: {
+            entry: "first_run",
+            step: "agent",
+            operation: "install",
+            outcome: "failed",
+            error: "exit 1",
+          },
         },
       ]) {
         expect((await post(harness, event)).status).toBe(400);
