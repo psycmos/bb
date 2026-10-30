@@ -343,10 +343,14 @@ first-send events through `POST /api/v1/system/telemetry/events`
 (`sdk.system.experimental_recordTelemetryEvent`): `onboarding_started`,
 `onboarding_step_reached`, `onboarding_step_completed`,
 `onboarding_step_skipped`, `onboarding_finished`, `onboarding_agent_state`,
-`onboarding_sign_in`, and `new_thread_submit` (started, accepted, or failed).
-The route accepts only these events with fixed enums and booleans: no provider
-ids, account details, prompts, project or file names, terminal output, error
-messages, or session ids. Sign-in `exited` means the command exited before
+`onboarding_sign_in`, `onboarding_operation`, and `new_thread_submit`
+(started, accepted, or failed). `onboarding_operation` reports a guide action
+(agent install or update, project scan or import) as started, succeeded, or
+failed; agent actions carry the agent id (a shipped built-in provider ID,
+otherwise `other`), and project actions carry only how many repos were found,
+selected, or imported. Otherwise the route accepts only these events with fixed
+enums, booleans, and counts: no account details, prompts, project or file
+names, terminal output, error messages, or session ids. Sign-in `exited` means the command exited before
 readiness was observed, not that authentication succeeded; `new_thread_submit`
 `accepted` means the thread was created, not that the provider answered.
 By default (`BB_FF_INITIATOR_TELEMETRY=false` turns it off), `thread_created` and `user_message_sent` also carry

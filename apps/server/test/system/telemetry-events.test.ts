@@ -77,6 +77,30 @@ describe("client telemetry events", () => {
     });
   });
 
+  it("reports a custom agent id as other", async () => {
+    await withTestHarness(async (harness) => {
+      const capture = vi.fn<TelemetryService["capture"]>();
+      harness.deps.telemetry = { ...harness.deps.telemetry, capture };
+      const properties = {
+        entry: "first_run",
+        step: "agent",
+        operation: "install",
+        outcome: "started",
+      } as const;
+
+      const response = await post(harness, {
+        name: "onboarding_operation",
+        properties: { ...properties, resource_id: "my-company-agent" },
+      });
+
+      expect(response.status).toBe(200);
+      expect(capture).toHaveBeenCalledExactlyOnceWith({
+        name: "onboarding_operation",
+        properties: { ...properties, resource_id: "other" },
+      });
+    });
+  });
+
   it("rejects unknown events and identifying extra properties", async () => {
     await withTestHarness(async (harness) => {
       const capture = vi.fn<TelemetryService["capture"]>();
