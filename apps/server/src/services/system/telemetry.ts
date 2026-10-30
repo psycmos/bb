@@ -15,7 +15,7 @@ export type TelemetryAccessRoute = "connect" | "direct" | "loopback";
 
 const telemetryRequestStorage = new AsyncLocalStorage<{
   appSurface: RequestAppSurface;
-  accessRoute: TelemetryAccessRoute;
+  accessRoute: TelemetryAccessRoute | null;
 }>();
 
 export type TelemetryInitiator =
@@ -157,7 +157,10 @@ function appInstallProperties(install: AppInstall | null) {
 }
 
 export function runWithTelemetryRequest<T>(
-  request: { appSurface: RequestAppSurface; accessRoute: TelemetryAccessRoute },
+  request: {
+    appSurface: RequestAppSurface;
+    accessRoute: TelemetryAccessRoute | null;
+  },
   callback: () => T,
 ): T {
   return telemetryRequestStorage.run(request, callback);
@@ -210,7 +213,9 @@ export async function createTelemetryService(
           ...commonProperties,
           ...eventProperties,
           app_surface: appSurface,
-          ...(request ? { access_route: request.accessRoute } : {}),
+          ...(request?.accessRoute
+            ? { access_route: request.accessRoute }
+            : {}),
         },
         timestamp: new Date().toISOString(),
       });

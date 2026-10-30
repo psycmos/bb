@@ -81,7 +81,13 @@ export function getGateMachineId(context: GateAuthHeaderReader): string | null {
 
 export function resolveRequestAccessRoute(
   context: Context,
-): "connect" | "direct" | "loopback" {
+): "connect" | "direct" | "loopback" | null {
+  if (
+    context.req.path.startsWith("/internal/") ||
+    getGateAuthKind(context) === "machine"
+  ) {
+    return null;
+  }
   if (isTunnelIngressContext(context)) return "connect";
   const address = getTrustedRemoteAddress(context);
   return address === undefined || isLoopbackAddress(address)
