@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   definePluginApp,
+  useBbNavigate,
   experimental_Icon as Icon,
   useRpc,
   type StandardSchemaV1InferOutput,
 } from "@get-bb/plugin-sdk/app";
+import { docsLinks } from "@bb/domain/docs-links";
+import { DocsLink } from "@bb/shared-ui/docs-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +50,7 @@ function agentNote(agent: RegistryAgent): string | null {
 }
 
 function AcpRegistrySettings() {
+  const navigate = useBbNavigate();
   const rpc = useRpc<typeof acpRegistryRpcContract>();
   const [view, setView] = useState<RegistryView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +103,10 @@ function AcpRegistrySettings() {
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Agents from the official ACP registry. Adding one makes it a
             provider in the thread composer; it runs through npx or uvx on the
-            machine that hosts the thread.
+            machine that hosts the thread.{" "}
+            <DocsLink href={docsLinks.acpAgents} onOpen={navigate.openUrl}>
+              Learn more about ACP agents
+            </DocsLink>
           </p>
         </div>
         <Button

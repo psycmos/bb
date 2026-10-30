@@ -8,6 +8,7 @@ import {
   selectCommandGroups,
 } from "./command-groups.js";
 import { resolveBbCliVersion } from "./version.js";
+import { BB_DOCS_URL } from "@bb/domain/docs-links";
 import type { CliRuntimeContext } from "./context-env.js";
 
 if (process.env.FORCE_COLOR !== undefined) {
@@ -235,6 +236,8 @@ Quick start:
   bb project list
   bb thread show <id>
   bb thread spawn --project <id> --provider codex --prompt "..."
+
+Docs: ${BB_DOCS_URL}
 `;
   });
 

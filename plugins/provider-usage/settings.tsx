@@ -1,8 +1,11 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
+  useBbNavigate,
   useRpc,
   experimental_ProviderIcon as ProviderIcon,
 } from "@get-bb/plugin-sdk/app";
+import { docsLinks } from "@bb/domain/docs-links";
+import { DocsLink } from "@bb/shared-ui/docs-link";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -367,6 +370,14 @@ function ProviderUsageBody({
   }
 }
 
+function UsageDocsLink({ onOpenUrl }: { onOpenUrl: (url: string) => boolean }) {
+  return (
+    <DocsLink href={docsLinks.usageLimits} onOpen={onOpenUrl}>
+      Learn more about usage limits
+    </DocsLink>
+  );
+}
+
 export function UsageSettingsContent({
   machines,
   selectedId,
@@ -374,6 +385,7 @@ export function UsageSettingsContent({
   error,
   onSelect,
   onRefresh,
+  onOpenUrl,
 }: {
   machines: UsageMachine[];
   selectedId: string | null;
@@ -381,6 +393,7 @@ export function UsageSettingsContent({
   error: boolean;
   onSelect: (machineId: string) => void;
   onRefresh: () => void;
+  onOpenUrl: (url: string) => boolean;
 }) {
   const selected = selectUsageMachine(machines, selectedId, null);
   const groups = new Map<string, UsageProvider[]>();
@@ -420,7 +433,8 @@ export function UsageSettingsContent({
             </h2>
           </div>
           <p className="mt-0.5 text-xs leading-snug text-subtle-foreground/75">
-            Your provider subscription usage.
+            Your provider subscription usage.{" "}
+            <UsageDocsLink onOpenUrl={onOpenUrl} />
           </p>
         </div>
         <div className="shrink-0 self-start">
@@ -531,6 +545,7 @@ export async function loadUsage(
 
 export function UsageSettings() {
   const rpc = useRpc<typeof providerUsageRpcContract>();
+  const navigate = useBbNavigate();
   const [machines, setMachines] = useState<UsageMachine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -575,6 +590,7 @@ export function UsageSettings() {
       error={error}
       onSelect={setSelectedId}
       onRefresh={() => setRefresh((value) => value + 1)}
+      onOpenUrl={navigate.openUrl}
     />
   );
 }

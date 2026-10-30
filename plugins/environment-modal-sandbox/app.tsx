@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import {
   definePluginApp,
+  useBbNavigate,
   useRpc,
   type JsonValue,
   type PluginMachineProviderInputsProps,
 } from "@get-bb/plugin-sdk/app";
+import { docsLinks } from "@bb/domain/docs-links";
+import { DocsLink } from "@bb/shared-ui/docs-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Icon } from "@/components/ui/icon";
@@ -218,6 +221,21 @@ function replaceAt<T>(items: readonly T[], index: number, value: T): T[] {
 }
 
 function LaunchOptionsSettings() {
+  const navigate = useBbNavigate();
+  return (
+    <div className="w-full min-w-0 space-y-5">
+      <p className="text-xs leading-snug text-subtle-foreground/75">
+        Choose the sizes and images new Modal sandboxes launch with.{" "}
+        <DocsLink href={docsLinks.sandboxes} onOpen={navigate.openUrl}>
+          Learn more about sandboxes
+        </DocsLink>
+      </p>
+      <LaunchOptionsForm />
+    </div>
+  );
+}
+
+function LaunchOptionsForm() {
   const rpc = useRpc<typeof modalRpcContract>();
   const [saved, setSaved] = useState<ModalLaunchOptions | null>(null);
   const [draft, setDraft] = useState<ModalLaunchOptions | null>(null);
