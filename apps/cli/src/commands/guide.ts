@@ -1,11 +1,20 @@
 import { Command } from "commander";
-import { createGuideArea } from "@bb/sdk/node";
+import {
+  createGuideArea,
+  parseGuideSearchQuery,
+  type GuideSearchResponse,
+} from "@bb/sdk/node";
 import { action, CliUsageError } from "../action.js";
 import { CORE_COMMAND_GROUPS } from "../command-groups.js";
 import { outputJson } from "./helpers.js";
 
 interface GuideCommandOptions {
   json?: boolean;
+}
+
+interface GuideSearchCommandOptions {
+  json?: boolean;
+  limit?: string;
 }
 
 export interface GuideCommandIndexEntry {
@@ -33,18 +42,17 @@ function collectCommandIndex(
     if (child.name() === "help") return [];
     const path = [...prefix, child.name()];
     const nested = collectCommandIndex(child, path);
-    if (nested.length > 0) return nested;
-    return [
-      {
-        aliases: child.aliases(),
-        arguments: argumentUsage(child),
-        description: child.description(),
-        options: child.options
-          .filter((option) => !option.hidden)
-          .map((option) => option.flags.replace(/^-\w, /u, "")),
-        path: path.join(" "),
-      },
-    ];
+    const entry = {
+      aliases: child.aliases(),
+      arguments: argumentUsage(child),
+      description: child.description(),
+      options: child.options
+        .filter((option) => !option.hidden)
+        .map((option) => option.flags.replace(/^-\w, /u, "")),
+      path: path.join(" "),
+    };
+    if (nested.length === 0) return [entry];
+    return child.registeredArguments.length > 0 ? [entry, ...nested] : nested;
   });
 }
 
@@ -90,13 +98,80 @@ function formatCommandIndexLine(
   return `${head}${options}\n    ${entry.description}`;
 }
 
+function parseSearchLimit(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  if (!/^\d+$/u.test(raw.trim())) {
+    throw new CliUsageError({
+      code: "invalid_value",
+      hint: "Pass a whole number, for example --limit 5.",
+      message: `Invalid --limit '${raw}'.`,
+    });
+  }
+  return Number(raw.trim());
+}
+
+function formatSearchResults(response: GuideSearchResponse): string {
+  const lines = response.results.flatMap((result, index) => {
+    const heading = [result.title, result.section]
+      .filter((part) => part !== null)
+      .join(" › ");
+    return [
+      `${index + 1}. [${result.source}] ${heading}`,
+      `   ${result.location}`,
+      ...(result.snippet.length > 0 ? [`   ${result.snippet}`] : []),
+    ];
+  });
+  if (lines.length === 0) {
+    lines.push(`No matches for '${response.query}'.`);
+  }
+  if (!response.docs.ok) {
+    lines.push(
+      "",
+      `Online docs not searched (${response.docs.url}: ${response.docs.error}); results are from this machine only.`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function registerGuideSearchCommand(guide: Command): void {
+  guide
+    .command("search <question>")
+    .description(
+      "Search the online docs, the bb guide chapters, and the skills on this machine in one ranked list",
+    )
+    .option("--limit <n>", "Most results to print, 1-50 (default 10)")
+    .option("--json", "Print machine-readable JSON output")
+    .action(
+      action(async (question: string, opts: GuideSearchCommandOptions) => {
+        let parsed: ReturnType<typeof parseGuideSearchQuery>;
+        try {
+          parsed = parseGuideSearchQuery({
+            query: question,
+            limit: parseSearchLimit(opts.limit),
+          });
+        } catch (error) {
+          if (error instanceof CliUsageError) throw error;
+          throw new CliUsageError({
+            code: "invalid_value",
+            hint: 'bb guide search "<question>" [--limit <n>] [--json]',
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+        const response = await createGuideArea().search(parsed);
+        if (outputJson(opts, response)) return;
+        console.log(formatSearchResults(response));
+      }),
+    );
+}
+
 export function registerGuideCommand(program: Command): void {
-  program
+  const guide = program
     .command("guide [chapter] [group]")
     .description(
-      "Show the BB system overview and CLI guide; `bb guide commands [group]` lists every core command on one page",
+      "Show the BB system overview and CLI guide; `bb guide commands [group]` lists every core command on one page; `bb guide search <question>` searches the docs, guide, and skills",
     )
     .option("--json", "Print machine-readable JSON output")
+    .enablePositionalOptions()
     .action(
       action(
         async (
@@ -130,4 +205,5 @@ export function registerGuideCommand(program: Command): void {
         },
       ),
     );
+  registerGuideSearchCommand(guide);
 }
