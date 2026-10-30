@@ -1,3 +1,4 @@
+import { isLoopbackAddress } from "@bb/config/loopback";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import {
   APP_SURFACE_API,
@@ -76,6 +77,16 @@ export function getGateAuthKind(
 export function getGateMachineId(context: GateAuthHeaderReader): string | null {
   const value = context.req.header(GATE_MACHINE_ID_HEADER_NAME)?.trim();
   return value ? value : null;
+}
+
+export function resolveRequestAccessRoute(
+  context: Context,
+): "connect" | "direct" | "loopback" {
+  if (isTunnelIngressContext(context)) return "connect";
+  const address = getTrustedRemoteAddress(context);
+  return address === undefined || isLoopbackAddress(address)
+    ? "loopback"
+    : "direct";
 }
 
 export function resolveRequestAppSurface(context: Context): RequestAppSurface {
